@@ -1,0 +1,15 @@
+test1.txt|5746D:\南航云盘下载\学生测试用软件\学生测试用软件\iperf_windows\iperf_windows>iperf -u -s -i 1 -p 13450
+------------------------------------------------------------
+Server listening on UDP port 13450
+Receiving 1470 byte datagrams
+UDP buffer size: 64.0 KByte (default)
+------------------------------------------------------------
+[  3] local 10.168.6.15 port 13450 connected with 10.168.9.13 port 60093
+[ ID] Interval       Transfer     Bandwidth        Jitter   Lost/Total Datagrams
+[  3]  0.0- 1.0 sec  88.9 KBytes   728 Kbits/sec   9.796 ms    0/   65 (0%)
+[  3]  1.0- 2.0 sec  82.0 KBytes   672 Kbits/sec  16.190 ms    0/   60 (0%)
+[  3]  2.0- 3.0 sec  87.5 KBytes   717 Kbits/sec  16.146 ms    0/   64 (0%)
+[  3]  3.0- 4.0 sec  91.6 KBytes   750 Kbits/sec  13.084 ms    0/   67 (0%)
+[  3]  4.0- 5.0 sec  84.8 KBytes   694 Kbits/sec  14.439 ms    0/   62 (0%)
+[  3]  5.0- 6.0 sec  90.2 KBytes   739 Kbits/sec  15.576 ms    0/   66 (0%)
+[  3]  6.0- 7.0 sec  83.4 KBytes   683 Kb
