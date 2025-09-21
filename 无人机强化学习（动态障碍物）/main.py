@@ -26,20 +26,20 @@ def main():
     
     # 在边界添加额外的静态障碍物，但避开起点(0,0)和终点(19,19)附近区域
     # 上边界障碍物 (避开起点附近区域)
-    obstacles.append((0, 4, 1, 2))   # 上边界左侧
-    #obstacles.append((0, 14, 1, 2))  # 上边界右侧，避开终点正上方
+    #obstacles.append((0, 4, 1, 2))   # 下左
+    obstacles.append((0, 14, 1, 2))  # 下右
     
     # 下边界障碍物 (避开终点附近区域)
-    obstacles.append((19, 2, 1, 2))  # 下边界左侧，避开终点正下方
-    #obstacles.append((19, 14, 1, 2)) # 下边界右侧
+    #obstacles.append((19, 2, 1, 2))  # 上左
+    #obstacles.append((19, 14, 1, 2)) # 上右
     
     # 左边界障碍物 (避开起点附近区域)
-    obstacles.append((2, 0, 2, 1))   # 左边界上侧，避开起点正左方
-    #obstacles.append((14, 0, 2, 1))  # 左边界下侧
+    #obstacles.append((2, 0, 2, 1))   # 左边界下
+    obstacles.append((14, 0, 2, 1))  # 左边界上
     
     # 右边界障碍物 (避开终点附近区域)
-    obstacles.append((2, 19, 2, 1))  # 右边界上侧，避开终点正右方
-    #obstacles.append((14, 19, 2, 1)) # 右边界下侧
+    #obstacles.append((2, 19, 2, 1))  # 右边界下侧
+    #obstacles.append((14, 19, 2, 1)) # 右边界上侧
     
     # 添加障碍物到环境中
     for obs in obstacles:
@@ -65,7 +65,7 @@ def main():
     pg_rewards = pg_agent.train(episodes=1000)
     
     print("\nTraining DQN agent...")
-    dqn_rewards = dqn_agent.train(episodes=1000)
+    dqn_rewards = dqn_agent.train(episodes=1000)      #1000次太慢了
     
     # 找到路径（在查找路径前更新动态障碍物位置）
     env.update_dynamic_obstacles()  # 确保我们看到的是当前的动态障碍物位置
@@ -231,7 +231,7 @@ def main():
     ax3.set_title('Policy Gradient Path Planning', fontsize=14, fontweight='bold')
     ax3.set_xlabel('X Coordinate')
     ax3.set_ylabel('Y Coordinate')
-    
+
     # DQN路径
     ax4 = axes[3]
     ax4.imshow(env.grid, cmap='binary', origin='lower')

@@ -215,3 +215,96 @@ class SarsaAgent:
             path.append(state)
         
         return path
+
+# 测试SARSA算法
+if __name__ == "__main__":
+    from environment import GridEnvironment
+    import matplotlib.pyplot as plt
+    
+    # 创建环境
+    env = GridEnvironment(size=20)
+    
+    # 添加静态障碍物（至少10个，分散布置，减小部分障碍物面积）
+    obstacles = [
+        (3, 3, 3, 3),   # 左上区域 (减小面积 4x4 -> 3x3)
+        (15, 3, 3, 3),  # 右上区域 (减小面积 4x4 -> 3x3)
+        (3, 15, 3, 3),  # 左下区域 (减小面积 4x4 -> 3x3)
+        (15, 15, 3, 3), # 右下区域 (减小面积 4x4 -> 3x3)
+        (8, 8, 2, 2),   # 中心偏左 (减小面积 3x3 -> 2x2)
+        (12, 8, 2, 2),  # 中心偏右 (减小面积 3x3 -> 2x2)
+        (8, 12, 2, 2),  # 中心偏下 (减小面积 3x3 -> 2x2)
+        (12, 12, 2, 2), # 中心偏上 (减小面积 3x3 -> 2x2)
+        (5, 10, 2, 1),  # 左侧中部 (减小面积 2x2 -> 2x1)
+        (15, 10, 2, 1)  # 右侧中部 (减小面积 2x2 -> 2x1)
+    ]
+    
+    # 在边界添加额外的静态障碍物，但避开起点(0,0)和终点(19,19)附近区域
+    # 上边界障碍物 (避开起点附近区域)
+    #obstacles.append((0, 4, 1, 2))   # 下左
+    obstacles.append((0, 14, 1, 2))  # 下右
+    
+    # 下边界障碍物 (避开终点附近区域)
+    #obstacles.append((19, 2, 1, 2))  # 上左
+    #obstacles.append((19, 14, 1, 2)) # 上右
+    
+    # 左边界障碍物 (避开起点附近区域)
+    #obstacles.append((2, 0, 2, 1))   # 左边界下
+    obstacles.append((14, 0, 2, 1))  # 左边界上
+    
+    # 右边界障碍物 (避开终点附近区域)
+    #obstacles.append((2, 19, 2, 1))  # 右边界下侧
+    #obstacles.append((14, 19, 2, 1)) # 右边界上侧
+    
+    # 添加障碍物到环境中
+    for obs in obstacles:
+        env.add_obstacle(*obs)
+    
+    # 添加固定轨迹往复运动的动态障碍物
+    env.add_dynamic_obstacles(2)
+    
+    # 创建SARSA智能体
+    sarsa_agent = SarsaAgent(env)
+    
+    # 训练智能体
+    print("Training SARSA agent...")
+    sarsa_rewards = sarsa_agent.train(episodes=1000)
+    
+    # 找到路径（在查找路径前更新动态障碍物位置）
+    env.update_dynamic_obstacles()  # 确保我们看到的是当前的动态障碍物位置
+    sarsa_path = sarsa_agent.find_path()
+    
+    # 验证路径合法性
+    sarsa_valid = sarsa_agent.validate_path(sarsa_path)
+    
+    print(f"SARSA path valid: {sarsa_valid}")
+    
+    # 可视化结果
+    if sarsa_path and sarsa_valid:
+        env.visualize(sarsa_path, 'SARSA Path Planning')
+    elif sarsa_path:
+        print("Warning: SARSA generated an invalid path")
+        env.visualize(sarsa_path, 'SARSA Path Planning (Invalid)')
+    else:
+        env.visualize([], 'SARSA Path Planning (No Path Found)')
+    
+    # 绘制奖励曲线
+    plt.figure(figsize=(10, 5))
+    
+    # 计算滑动平均以更好地显示趋势
+    window_size = 50
+    sarsa_rewards_smooth = np.convolve(sarsa_rewards, np.ones(window_size)/window_size, mode='valid')
+    
+    episodes_range = np.arange(len(sarsa_rewards_smooth))
+    plt.plot(episodes_range, sarsa_rewards_smooth, label='SARSA', color='blue', linewidth=2)
+    plt.title('SARSA Cumulative Reward over Episodes', fontsize=14, fontweight='bold')
+    plt.xlabel('Episode')
+    plt.ylabel('Reward (Smoothed)')
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.show()
+    
+    # 输出统计信息
+    print("\n=== SARSA Performance ===")
+    print(f"SARSA - Path length: {len(sarsa_path)}")
+    print(f"SARSA - Final reward: {sarsa_rewards[-1]}")
+    print(f"SARSA - Average reward (last 100 episodes): {np.mean(sarsa_rewards[-100:]):.2f}")

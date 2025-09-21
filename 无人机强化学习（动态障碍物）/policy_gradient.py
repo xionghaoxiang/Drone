@@ -2,8 +2,8 @@ import numpy as np
 import random
 
 class PolicyGradientAgent:
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.9, epsilon=0.8, epsilon_decay=0.995, epsilon_min=0.5):
-        # 修改：添加探索机制
+    def __init__(self, env, learning_rate=0.01, discount_factor=0.99, epsilon=0.8, epsilon_decay=0.995, epsilon_min=0.1):
+        # 修改：调整超参数以提高性能
         self.env = env
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
@@ -12,12 +12,16 @@ class PolicyGradientAgent:
         self.epsilon_min = epsilon_min
         
         # 策略网络（使用简单的线性函数近似）
-        self.weights = np.random.randn(env.size * env.size, 4) * 0.01
+        # 修改：使用更好的权重初始化
+        self.weights = np.random.randn(env.size * env.size, 4) * 0.1
         
         # 存储episode的经验
         self.states = []
         self.actions = []
         self.rewards = []
+        
+        # 添加基线以减少方差
+        self.baseline = 0
         
     def get_state_index(self, position):
         """将位置转换为状态索引"""
@@ -88,9 +92,12 @@ class PolicyGradientAgent:
         # 计算折扣奖励
         discounted_rewards = self.discount_rewards(self.rewards)
         
+        # 更新基线（使用移动平均）
+        self.baseline = 0.9 * self.baseline + 0.1 * np.mean(discounted_rewards)
+        
         # 标准化奖励以提高稳定性
         if np.std(discounted_rewards) > 0:
-            discounted_rewards = (discounted_rewards - np.mean(discounted_rewards)) / np.std(discounted_rewards)
+            discounted_rewards = (discounted_rewards - self.baseline) / (np.std(discounted_rewards) + 1e-9)
         
         # 更新策略
         for i in range(len(self.states)):
@@ -140,7 +147,7 @@ class PolicyGradientAgent:
                 elif state == next_state:  # 碰撞或边界
                     reward = -10
                 else:
-                    # 增加小步移动的正向奖励，鼓励探索
+                    # 减少移动惩罚，鼓励探索
                     reward = -1
                 
                 # 存储经验
@@ -276,3 +283,100 @@ class PolicyGradientAgent:
         if state == self.env.goal:
             path.append(self.env.goal)
         return path
+
+# 测试策略梯度算法
+if __name__ == "__main__":
+    from environment import GridEnvironment
+    import matplotlib.pyplot as plt
+    
+    # 设置随机种子以确保结果可复现
+    random.seed(42)
+    np.random.seed(42)
+    
+    # 创建环境
+    env = GridEnvironment(size=20)
+    
+    # 添加静态障碍物（至少10个，分散布置，减小部分障碍物面积）
+    obstacles = [
+        (3, 3, 3, 3),   # 左上区域 (减小面积 4x4 -> 3x3)
+        (15, 3, 3, 3),  # 右上区域 (减小面积 4x4 -> 3x3)
+        (3, 15, 3, 3),  # 左下区域 (减小面积 4x4 -> 3x3)
+        (15, 15, 3, 3), # 右下区域 (减小面积 4x4 -> 3x3)
+        (8, 8, 2, 2),   # 中心偏左 (减小面积 3x3 -> 2x2)
+        (12, 8, 2, 2),  # 中心偏右 (减小面积 3x3 -> 2x2)
+        (8, 12, 2, 2),  # 中心偏下 (减小面积 3x3 -> 2x2)
+        (12, 12, 2, 2), # 中心偏上 (减小面积 3x3 -> 2x2)
+        (5, 10, 2, 1),  # 左侧中部 (减小面积 2x2 -> 2x1)
+        (15, 10, 2, 1)  # 右侧中部 (减小面积 2x2 -> 2x1)
+    ]
+    
+    # 在边界添加额外的静态障碍物，但避开起点(0,0)和终点(19,19)附近区域
+    # 上边界障碍物 (避开起点附近区域)
+    #obstacles.append((0, 4, 1, 2))   # 下左
+    obstacles.append((0, 14, 1, 2))  # 下右
+    
+    # 下边界障碍物 (避开终点附近区域)
+    #obstacles.append((19, 2, 1, 2))  # 上左
+    #obstacles.append((19, 14, 1, 2)) # 上右
+    
+    # 左边界障碍物 (避开起点附近区域)
+    #obstacles.append((2, 0, 2, 1))   # 左边界下
+    obstacles.append((14, 0, 2, 1))  # 左边界上
+    
+    # 右边界障碍物 (避开终点附近区域)
+    #obstacles.append((2, 19, 2, 1))  # 右边界下侧
+    #obstacles.append((14, 19, 2, 1)) # 右边界上侧
+    
+    # 添加障碍物到环境中
+    for obs in obstacles:
+        env.add_obstacle(*obs)
+    
+    # 添加固定轨迹往复运动的动态障碍物
+    env.add_dynamic_obstacles(2)
+    
+    # 创建策略梯度智能体
+    policy_agent = PolicyGradientAgent(env)
+    
+    # 训练智能体
+    print("Training Policy Gradient agent...")
+    policy_rewards = policy_agent.train(episodes=1000)
+    
+    # 找到路径（在查找路径前更新动态障碍物位置）
+    env.update_dynamic_obstacles()  # 确保我们看到的是当前的动态障碍物位置
+    policy_path = policy_agent.find_path()
+    
+    # 验证路径合法性
+    policy_valid = policy_agent.validate_path(policy_path)
+    
+    print(f"Policy Gradient path valid: {policy_valid}")
+    
+    # 可视化结果
+    if policy_path and policy_valid:
+        env.visualize(policy_path, 'Policy Gradient Path Planning')
+    elif policy_path:
+        print("Warning: Policy Gradient generated an invalid path")
+        env.visualize(policy_path, 'Policy Gradient Path Planning (Invalid)')
+    else:
+        env.visualize([], 'Policy Gradient Path Planning (No Path Found)')
+    
+    # 绘制奖励曲线
+    plt.figure(figsize=(10, 5))
+    
+    # 计算滑动平均以更好地显示趋势
+    window_size = 50
+    policy_rewards_smooth = np.convolve(policy_rewards, np.ones(window_size)/window_size, mode='valid')
+    
+    episodes_range = np.arange(len(policy_rewards_smooth))
+    plt.plot(episodes_range, policy_rewards_smooth, label='Policy Gradient', color='orange', linewidth=2)
+    plt.title('Policy Gradient Cumulative Reward over Episodes', fontsize=14, fontweight='bold')
+    plt.xlabel('Episode')
+    plt.ylabel('Reward (Smoothed)')
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.7)
+    plt.show()
+    
+    # 输出统计信息
+    print("\n=== Policy Gradient Performance ===")
+    print(f"Policy Gradient - Path length: {len(policy_path)}")
+    print(f"Policy Gradient - Final reward: {policy_rewards[-1]}")
+    print(f"Policy Gradient - Average reward (last 100 episodes): {np.mean(policy_rewards[-100:]):.2f}")

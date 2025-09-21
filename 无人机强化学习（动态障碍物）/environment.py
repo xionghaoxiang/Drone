@@ -23,28 +23,30 @@ class GridEnvironment:
     def add_dynamic_obstacles(self, num_obstacles=2):
         """添加固定轨迹往复运动的动态障碍物，初始位置固定"""
         for i in range(num_obstacles):
-            # 固定大小（4-6个网格），使其不会太大
-            size = random.randint(4, 6)
+            # 固定大小（4-6个网格）
+            size = random.randint(2, 2)
             
-            # 固定移动方向：一个水平移动，一个垂直移动
+            # 固定移动方向和轨迹
             if i == 0:
-                # 第一个障碍物水平移动，选择一个较远的行以避免干扰主要路径
-                row = 16  # 固定在第16行，靠近目标点但不会直接阻挡
+                # 第一个障碍物水平移动
+                row = 4  # 固定在第4行
                 # 限制移动范围，确保不会阻挡起点到终点的主要路径
                 trajectory = [(row, col) for col in range(4, self.size - 4)]
-                start_index = 0  # 固定初始位置
+                start_index = 0  # 固定初始位置在最左端
+                direction = 1    # 初始移动方向向右
             else:
-                # 第二个障碍物垂直移动，选择一个较远的列以避免干扰主要路径
-                col = 4  # 固定在第4列，靠近起点但不会直接阻挡
+                # 第二个障碍物垂直移动
+                col = 16  # 固定在第16列
                 # 限制移动范围，确保不会阻挡起点到终点的主要路径
                 trajectory = [(row, col) for row in range(4, self.size - 4)]
-                start_index = 0  # 固定初始位置
+                start_index = 0  # 固定初始位置在最上端
+                direction = 1    # 初始移动方向向下
             
             dynamic_obstacle = {
                 'trajectory': trajectory,
                 'current_index': start_index,
                 'size': size,
-                'direction': 1  # 1表示正向移动，-1表示反向移动
+                'direction': direction  # 1表示正向移动，-1表示反向移动
             }
             self.dynamic_obstacles.append(dynamic_obstacle)
     
