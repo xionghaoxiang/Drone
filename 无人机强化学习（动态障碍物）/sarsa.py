@@ -2,12 +2,17 @@ import numpy as np
 import random
 
 class SarsaAgent:
-    def __init__(self, env, learning_rate=0.1, discount_factor=0.9, epsilon=0.1):
+    def __init__(self, env, learning_rate=0.1, discount_factor=0.9, epsilon=0.1, reward_version='v1'):
         self.env = env
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
         self.epsilon = epsilon
         self.q_table = np.zeros((env.size, env.size, 4))  # 4个动作：上、右、下、左
+        
+        # 导入奖励函数模块
+        from reward_functions import get_reward_function
+        self.reward_function = get_reward_function(reward_version)
+        self.reward_version = reward_version
         
     def get_action(self, state):
         """选择动作"""
@@ -41,6 +46,27 @@ class SarsaAgent:
         else:
             return state  # 保持原位
     
+    def calculate_reward(self, state, action, next_state):
+        """
+        计算奖励值
+        
+        Args:
+            state: 当前状态
+            action: 执行的动作
+            next_state: 下一状态
+            
+        Returns:
+            reward: 奖励值
+        """
+        goal_reached = (next_state == self.env.goal)
+        collision = (state == next_state and next_state != self.env.goal)
+        
+        return self.reward_function(
+            self.env, state, action, next_state, 
+            goal_reached=goal_reached, 
+            collision=collision
+        )
+    
     def train(self, episodes=1000):
         """训练智能体"""
         rewards_history = []
@@ -48,6 +74,10 @@ class SarsaAgent:
         for episode in range(episodes):
             # 每个episode开始时更新动态障碍物
             self.env.update_dynamic_obstacles()
+            
+            # 如果使用时间敏感奖励函数，需要重置episode_steps
+            if self.reward_version == 'v5':
+                self.env.episode_steps = 0
             
             state = self.env.start
             action = self.get_action(state)  # 初始动作
@@ -57,13 +87,8 @@ class SarsaAgent:
             while state != self.env.goal:
                 next_state = self.get_next_state(state, action)
                 
-                # 计算奖励
-                if next_state == self.env.goal:
-                    reward = 100
-                elif state == next_state:  # 碰撞或边界
-                    reward = -10
-                else:
-                    reward = -1
+                # 使用新的奖励函数计算奖励
+                reward = self.calculate_reward(state, action, next_state)
                 
                 # 选择下一个动作 (SARSA的关键区别)
                 next_action = self.get_action(next_state)
@@ -77,6 +102,10 @@ class SarsaAgent:
                 
                 total_reward += reward
                 steps += 1
+                
+                # 如果使用时间敏感奖励函数，需要更新episode_steps
+                if self.reward_version == 'v5':
+                    self.env.episode_steps += 1
                 
                 if steps > 1000:  # 防止无限循环
                     break
@@ -92,7 +121,7 @@ class SarsaAgent:
                 # 验证路径的合法性
                 valid_path = self.validate_path(path)
                 if valid_path:
-                    self.env.visualize(path, f'SARSA Path - Episode {episode}')
+                    self.env.visualize(path, f'SARSA Path - Episode {episode} - Reward {self.reward_version}')
         
         return rewards_history
     

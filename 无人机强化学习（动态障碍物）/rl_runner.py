@@ -6,12 +6,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def run_reinforcement_learning(env):
+def run_reinforcement_learning(env, reward_version='v2'):
     """
     在给定环境中运行所有强化学习算法
     
     参数:
     env: GridEnvironment对象
+    reward_version: 奖励函数版本
     
     返回:
     dict: 包含所有算法结果的字典
@@ -24,10 +25,10 @@ def run_reinforcement_learning(env):
         from dqn import DQNAgent
         
         # 创建智能体
-        q_agent = QLearningAgent(env)
-        sarsa_agent = SarsaAgent(env)
-        pg_agent = PolicyGradientAgent(env)
-        dqn_agent = DQNAgent(env)
+        q_agent = QLearningAgent(env, reward_version=reward_version)
+        sarsa_agent = SarsaAgent(env, reward_version=reward_version)
+        pg_agent = PolicyGradientAgent(env, reward_version=reward_version)
+        dqn_agent = DQNAgent(env, reward_version=reward_version)
         
         # 训练智能体 (将训练次数从200提高到1000)
         print("正在训练Q-Learning智能体...")

@@ -26,20 +26,20 @@ def main():
     
     # 在边界添加额外的静态障碍物，但避开起点(0,0)和终点(19,19)附近区域
     # 上边界障碍物 (避开起点附近区域)
-    #obstacles.append((0, 4, 1, 2))   # 下左
+    obstacles.append((0, 4, 1, 2))   # 下左
     obstacles.append((0, 14, 1, 2))  # 下右
     
     # 下边界障碍物 (避开终点附近区域)
-    #obstacles.append((19, 2, 1, 2))  # 上左
-    #obstacles.append((19, 14, 1, 2)) # 上右
+    obstacles.append((19, 2, 1, 2))  # 上左
+    obstacles.append((19, 14, 1, 2)) # 上右
     
     # 左边界障碍物 (避开起点附近区域)
-    #obstacles.append((2, 0, 2, 1))   # 左边界下
+    obstacles.append((2, 0, 2, 1))   # 左边界下
     obstacles.append((14, 0, 2, 1))  # 左边界上
     
     # 右边界障碍物 (避开终点附近区域)
-    #obstacles.append((2, 19, 2, 1))  # 右边界下侧
-    #obstacles.append((14, 19, 2, 1)) # 右边界上侧
+    obstacles.append((2, 19, 2, 1))  # 右边界下侧
+    obstacles.append((14, 19, 2, 1)) # 右边界上侧
     
     # 添加障碍物到环境中
     for obs in obstacles:
@@ -49,10 +49,10 @@ def main():
     env.add_dynamic_obstacles(2)
     
     # 创建四个智能体（Q-learning、SARSA、策略梯度和DQN）
-    q_agent = QLearningAgent(env)
-    sarsa_agent = SarsaAgent(env)
-    pg_agent = PolicyGradientAgent(env)
-    dqn_agent = DQNAgent(env)
+    q_agent = QLearningAgent(env,reward_version='v2')
+    sarsa_agent = SarsaAgent(env,reward_version='v2')
+    pg_agent = PolicyGradientAgent(env,reward_version='v2')
+    dqn_agent = DQNAgent(env,reward_version='v2')
     
     # 训练智能体，将训练次数改为1000次
     print("Training Q-Learning agent...")

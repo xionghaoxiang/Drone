@@ -2,7 +2,7 @@ import numpy as np
 import random
 
 class PolicyGradientAgent:
-    def __init__(self, env, learning_rate=0.01, discount_factor=0.99, epsilon=0.8, epsilon_decay=0.995, epsilon_min=0.1):
+    def __init__(self, env, learning_rate=0.01, discount_factor=0.99, epsilon=0.8, epsilon_decay=0.995, epsilon_min=0.1, reward_version='v1'):
         # 修改：调整超参数以提高性能
         self.env = env
         self.learning_rate = learning_rate
@@ -22,6 +22,11 @@ class PolicyGradientAgent:
         
         # 添加基线以减少方差
         self.baseline = 0
+        
+        # 导入奖励函数模块
+        from reward_functions import get_reward_function
+        self.reward_function = get_reward_function(reward_version)
+        self.reward_version = reward_version
         
     def get_state_index(self, position):
         """将位置转换为状态索引"""
@@ -68,6 +73,27 @@ class PolicyGradientAgent:
             return (next_x, next_y)
         else:
             return state  # 保持原位
+    
+    def calculate_reward(self, state, action, next_state):
+        """
+        计算奖励值
+        
+        Args:
+            state: 当前状态
+            action: 执行的动作
+            next_state: 下一状态
+            
+        Returns:
+            reward: 奖励值
+        """
+        goal_reached = (next_state == self.env.goal)
+        collision = (state == next_state and next_state != self.env.goal)
+        
+        return self.reward_function(
+            self.env, state, action, next_state, 
+            goal_reached=goal_reached, 
+            collision=collision
+        )
     
     def store_experience(self, state, action, reward):
         """存储经验"""
@@ -132,6 +158,10 @@ class PolicyGradientAgent:
             # 每个episode开始时更新动态障碍物
             self.env.update_dynamic_obstacles()
             
+            # 如果使用时间敏感奖励函数，需要重置episode_steps
+            if self.reward_version == 'v5':
+                self.env.episode_steps = 0
+            
             # 初始化状态
             state = self.env.start
             total_reward = 0
@@ -141,14 +171,8 @@ class PolicyGradientAgent:
                 action = self.get_action(state)
                 next_state = self.get_next_state(state, action)
                 
-                # 修改奖励函数 - 增加正向激励
-                if next_state == self.env.goal:
-                    reward = 100
-                elif state == next_state:  # 碰撞或边界
-                    reward = -10
-                else:
-                    # 减少移动惩罚，鼓励探索
-                    reward = -1
+                # 使用新的奖励函数计算奖励
+                reward = self.calculate_reward(state, action, next_state)
                 
                 # 存储经验
                 self.store_experience(state, action, reward)
@@ -157,6 +181,10 @@ class PolicyGradientAgent:
                 state = next_state
                 total_reward += reward
                 steps += 1
+                
+                # 如果使用时间敏感奖励函数，需要更新episode_steps
+                if self.reward_version == 'v5':
+                    self.env.episode_steps += 1
                 
                 if steps > 1000:  # 防止无限循环
                     break
@@ -174,7 +202,7 @@ class PolicyGradientAgent:
                 # 验证路径的合法性
                 valid_path = self.validate_path(path)
                 if valid_path:
-                    self.env.visualize(path, f'Policy Gradient Path - Episode {episode}')
+                    self.env.visualize(path, f'Policy Gradient Path - Episode {episode} - Reward {self.reward_version}')
         
         return rewards_history
     

@@ -24,7 +24,7 @@ class DQN(nn.Module):
 
 class DQNAgent:
     def __init__(self, env, learning_rate=0.001, discount_factor=0.9, epsilon=0.1, 
-                 epsilon_decay=0.995, epsilon_min=0.01):
+                 epsilon_decay=0.995, epsilon_min=0.01, reward_version='v1'):
         self.env = env
         self.learning_rate = learning_rate
         self.discount_factor = discount_factor
@@ -47,6 +47,11 @@ class DQNAgent:
         # 更新目标网络的频率
         self.target_update_freq = 100
         self.step_count = 0
+        
+        # 导入奖励函数模块
+        from reward_functions import get_reward_function
+        self.reward_function = get_reward_function(reward_version)
+        self.reward_version = reward_version
         
     def get_state(self, position):
         """将位置转换为状态向量"""
@@ -162,6 +167,45 @@ class DQNAgent:
         else:
             return (x, y)  # 保持原位
     
+    def calculate_reward(self, state, action, next_state):
+        """
+        计算奖励值
+        
+        Args:
+            state: 当前状态 (坐标元组)
+            action: 执行的动作
+            next_state: 下一状态 (坐标元组)
+            
+        Returns:
+            reward: 奖励值
+        """
+        # 确保state是坐标元组
+        if isinstance(state, torch.Tensor):
+            if state.dim() == 1 and len(state) >= 2:
+                x = int(state[0].item() * self.env.size)
+                y = int(state[1].item() * self.env.size)
+                state = (x, y)
+            else:
+                state = self.env.start
+                
+        # 确保next_state是坐标元组
+        if isinstance(next_state, torch.Tensor):
+            if next_state.dim() == 1 and len(next_state) >= 2:
+                x = int(next_state[0].item() * self.env.size)
+                y = int(next_state[1].item() * self.env.size)
+                next_state = (x, y)
+            else:
+                next_state = self.env.start
+        
+        goal_reached = (next_state == self.env.goal)
+        collision = (state == next_state and next_state != self.env.goal)
+        
+        return self.reward_function(
+            self.env, state, action, next_state, 
+            goal_reached=goal_reached, 
+            collision=collision
+        )
+    
     def train(self, episodes=1000):
         """训练智能体"""
         rewards_history = []
@@ -173,6 +217,10 @@ class DQNAgent:
             # 每个episode开始时更新动态障碍物
             self.env.update_dynamic_obstacles()
             
+            # 如果使用时间敏感奖励函数，需要重置episode_steps
+            if self.reward_version == 'v5':
+                self.env.episode_steps = 0
+            
             # 初始化状态
             state = self.env.start
             state_tensor = self.get_state(state)
@@ -183,21 +231,13 @@ class DQNAgent:
                 action = self.get_action(state_tensor)
                 next_state = self.get_next_state(state, action)
                 
-                # 计算奖励
-                if next_state == self.env.goal:
-                    reward = 100
-                    done = True
-                elif state == next_state:  # 碰撞或边界
-                    reward = -10
-                    done = False
-                else:
-                    reward = -1
-                    done = False
+                # 使用新的奖励函数计算奖励
+                reward = self.calculate_reward(state, action, next_state)
                 
                 next_state_tensor = self.get_state(next_state)
                 
                 # 存储经验
-                self.remember(state_tensor, action, reward, next_state_tensor, done)
+                self.remember(state_tensor, action, reward, next_state_tensor, done=(next_state == self.env.goal))
                 
                 # 经验回放
                 self.replay()
@@ -207,6 +247,10 @@ class DQNAgent:
                 state_tensor = next_state_tensor
                 total_reward += reward
                 steps += 1
+                
+                # 如果使用时间敏感奖励函数，需要更新episode_steps
+                if self.reward_version == 'v5':
+                    self.env.episode_steps += 1
                 
                 # 更新计数器
                 self.step_count += 1
@@ -229,7 +273,7 @@ class DQNAgent:
                 # 验证路径的合法性
                 valid_path = self.validate_path(path)
                 if valid_path:
-                    self.env.visualize(path, f'DQN Path - Episode {episode}')
+                    self.env.visualize(path, f'DQN Path - Episode {episode} - Reward {self.reward_version}')
         
         return rewards_history
     

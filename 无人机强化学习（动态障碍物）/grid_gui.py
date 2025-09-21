@@ -30,6 +30,9 @@ class GridWorldGUI:
         self.dynamic_obstacle_size = tk.IntVar(value=4)
         self.dynamic_obstacle_count = tk.IntVar(value=2)
         
+        # 奖励函数版本
+        self.reward_version = tk.StringVar(value="v1")
+        
         # 用于存储动态障碍物轨迹点（每个障碍物独立）
         self.dynamic_obstacle_trajectories = []  # 存储每个障碍物的轨迹点列表
         self.current_trajectory_points = []  # 当前正在设置的轨迹点
@@ -78,6 +81,16 @@ class GridWorldGUI:
         self.dynamic_listbox = tk.Listbox(dynamic_frame, height=4)
         self.dynamic_listbox.pack(fill=tk.X, pady=(5, 0))
         self.dynamic_listbox.bind('<<ListboxSelect>>', self.on_dynamic_select)
+        
+        # 奖励函数选择
+        reward_frame = ttk.LabelFrame(control_frame, text="奖励函数")
+        reward_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Radiobutton(reward_frame, text="基础版本 (v1)", variable=self.reward_version, value="v1").pack(anchor=tk.W)
+        ttk.Radiobutton(reward_frame, text="距离敏感版本 (v2)", variable=self.reward_version, value="v2").pack(anchor=tk.W)
+        ttk.Radiobutton(reward_frame, text="步数优化版本 (v3)", variable=self.reward_version, value="v3").pack(anchor=tk.W)
+        ttk.Radiobutton(reward_frame, text="综合版本 (v4)", variable=self.reward_version, value="v4").pack(anchor=tk.W)
+        ttk.Radiobutton(reward_frame, text="时间敏感版本 (v5)", variable=self.reward_version, value="v5").pack(anchor=tk.W)
         
         # 网格大小设置
         size_frame = ttk.LabelFrame(control_frame, text="网格大小")
@@ -274,14 +287,17 @@ class GridWorldGUI:
                 for trajectory in trajectories_data:
                     self.dynamic_obstacle_trajectories.append([tuple(point) for point in trajectory])
                 
+                # 重置其他状态
+                self.current_trajectory_points = []
+                self.selected_dynamic_obstacle = None
+                
                 # 更新列表框
                 self.dynamic_listbox.delete(0, tk.END)
                 for i in range(len(self.dynamic_obstacle_trajectories)):
                     self.dynamic_listbox.insert(tk.END, f"动态障碍物 {i+1}")
                 
-                # 重置其他状态
-                self.current_trajectory_points = []
-                self.selected_dynamic_obstacle = None
+                # 重置奖励函数版本为默认值
+                self.reward_version.set("v1")
                 
                 # 更新界面
                 self.size_var.set(self.grid_size)
@@ -297,11 +313,14 @@ class GridWorldGUI:
             # 导入强化学习算法
             from rl_runner import run_reinforcement_learning, visualize_results
             
+            # 获取选择的奖励函数版本
+            reward_version = self.reward_version.get()
+            
             # 运行强化学习
-            self.status_label.config(text="正在运行强化学习...")
+            self.status_label.config(text=f"正在运行强化学习... 奖励函数版本: {reward_version}")
             self.root.update()
             
-            results = run_reinforcement_learning(self.env)
+            results = run_reinforcement_learning(self.env, reward_version=reward_version)
             
             if results:
                 self.status_label.config(text="强化学习完成，正在显示结果...")
