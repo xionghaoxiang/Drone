@@ -21,32 +21,39 @@ def run_reinforcement_learning(env):
         from q_learning import QLearningAgent
         from sarsa import SarsaAgent
         from policy_gradient import PolicyGradientAgent
+        from dqn import DQNAgent
         
         # 创建智能体
         q_agent = QLearningAgent(env)
         sarsa_agent = SarsaAgent(env)
         pg_agent = PolicyGradientAgent(env)
+        dqn_agent = DQNAgent(env)
         
-        # 训练智能体 (减少训练次数以加快GUI响应)
+        # 训练智能体 (将训练次数从200提高到1000)
         print("正在训练Q-Learning智能体...")
-        q_rewards = q_agent.train(episodes=200)
+        q_rewards = q_agent.train(episodes=1000)
         
         print("正在训练SARSA智能体...")
-        sarsa_rewards = sarsa_agent.train(episodes=200)
+        sarsa_rewards = sarsa_agent.train(episodes=1000)
         
         print("正在训练Policy Gradient智能体...")
-        pg_rewards = pg_agent.train(episodes=200)
+        pg_rewards = pg_agent.train(episodes=1000)
+        
+        print("正在训练DQN智能体...")
+        dqn_rewards = dqn_agent.train(episodes=1000)
         
         # 更新动态障碍物位置并查找路径
         env.update_dynamic_obstacles()
         q_path = q_agent.find_path()
         sarsa_path = sarsa_agent.find_path()
         pg_path = pg_agent.find_path()
+        dqn_path = dqn_agent.find_path()
         
         # 验证路径
         q_valid = q_agent.validate_path(q_path)
         sarsa_valid = sarsa_agent.validate_path(sarsa_path)
         pg_valid = pg_agent.validate_path(pg_path)
+        dqn_valid = dqn_agent.validate_path(dqn_path)
         
         # 返回结果
         results = {
@@ -64,6 +71,11 @@ def run_reinforcement_learning(env):
                 'rewards': pg_rewards,
                 'path': pg_path,
                 'valid': pg_valid
+            },
+            'dqn': {
+                'rewards': dqn_rewards,
+                'path': dqn_path,
+                'valid': dqn_valid
             }
         }
         
@@ -85,8 +97,9 @@ def visualize_results(env, results):
         print("没有结果可显示")
         return
     
-    # 创建图表显示路径
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    # 创建图表显示路径 (现在有4个算法，改为2行2列)
+    fig, axes = plt.subplots(2, 2, figsize=(15, 10))
+    axes = axes.flatten()
     
     # Q-Learning路径
     ax1 = axes[0]
@@ -121,6 +134,17 @@ def visualize_results(env, results):
     ax3.set_title('Policy Gradient Path')
     ax3.legend()
     
+    # DQN路径
+    ax4 = axes[3]
+    display_grid_for_visualization(ax4, env)
+    if results['dqn']['path'] and results['dqn']['valid']:
+        path_x = [p[1] for p in results['dqn']['path']]
+        path_y = [p[0] for p in results['dqn']['path']]
+        ax4.plot(path_x, path_y, 'm-', linewidth=2, marker='d', markersize=4,
+                label=f'DQN Path (Length: {len(results["dqn"]["path"])})')
+    ax4.set_title('DQN Path')
+    ax4.legend()
+    
     plt.tight_layout()
     plt.show()
     
@@ -141,6 +165,11 @@ def visualize_results(env, results):
         pg_rewards_smooth = np.convolve(results['policy_gradient']['rewards'], 
                                        np.ones(window_size)/window_size, mode='valid')
         plt.plot(pg_rewards_smooth, label='Policy Gradient')
+        
+    if len(results['dqn']['rewards']) >= window_size:
+        dqn_rewards_smooth = np.convolve(results['dqn']['rewards'], 
+                                       np.ones(window_size)/window_size, mode='valid')
+        plt.plot(dqn_rewards_smooth, label='DQN')
     
     plt.title('Cumulative Reward over Episodes')
     plt.xlabel('Episode')
