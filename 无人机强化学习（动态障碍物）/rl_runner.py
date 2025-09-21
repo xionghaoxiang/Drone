@@ -1,10 +1,6 @@
-"""
-强化学习运行器模块
-用于在GUI中直接调用强化学习算法
-"""
-
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 def run_reinforcement_learning(env, reward_version='v2'):
     """
@@ -32,16 +28,24 @@ def run_reinforcement_learning(env, reward_version='v2'):
         
         # 训练智能体 (将训练次数从200提高到1000)
         print("正在训练Q-Learning智能体...")
+        start_time = time.time()
         q_rewards = q_agent.train(episodes=1000)
+        q_time = time.time() - start_time
         
         print("正在训练SARSA智能体...")
+        start_time = time.time()
         sarsa_rewards = sarsa_agent.train(episodes=1000)
+        sarsa_time = time.time() - start_time
         
         print("正在训练Policy Gradient智能体...")
+        start_time = time.time()
         pg_rewards = pg_agent.train(episodes=1000)
+        pg_time = time.time() - start_time
         
         print("正在训练DQN智能体...")
+        start_time = time.time()
         dqn_rewards = dqn_agent.train(episodes=1000)
+        dqn_time = time.time() - start_time
         
         # 更新动态障碍物位置并查找路径
         env.update_dynamic_obstacles()
@@ -61,22 +65,26 @@ def run_reinforcement_learning(env, reward_version='v2'):
             'q_learning': {
                 'rewards': q_rewards,
                 'path': q_path,
-                'valid': q_valid
+                'valid': q_valid,
+                'training_time': q_time
             },
             'sarsa': {
                 'rewards': sarsa_rewards,
                 'path': sarsa_path,
-                'valid': sarsa_valid
+                'valid': sarsa_valid,
+                'training_time': sarsa_time
             },
             'policy_gradient': {
                 'rewards': pg_rewards,
                 'path': pg_path,
-                'valid': pg_valid
+                'valid': pg_valid,
+                'training_time': pg_time
             },
             'dqn': {
                 'rewards': dqn_rewards,
                 'path': dqn_path,
-                'valid': dqn_valid
+                'valid': dqn_valid,
+                'training_time': dqn_time
             }
         }
         
@@ -177,6 +185,29 @@ def visualize_results(env, results):
     plt.ylabel('Reward')
     plt.legend()
     plt.grid(True)
+    plt.show()
+    
+    # 绘制训练时间对比图
+    plt.figure(figsize=(10, 6))
+    algorithms = ['Q-Learning', 'SARSA', 'Policy Gradient', 'DQN']
+    training_times = [
+        results['q_learning']['training_time'],
+        results['sarsa']['training_time'],
+        results['policy_gradient']['training_time'],
+        results['dqn']['training_time']
+    ]
+    
+    bars = plt.bar(algorithms, training_times, color=['blue', 'green', 'red', 'magenta'])
+    plt.title('Training Time Comparison')
+    plt.xlabel('Algorithm')
+    plt.ylabel('Training Time (seconds)')
+    
+    # 在柱状图上显示数值
+    for bar, time_val in zip(bars, training_times):
+        plt.text(bar.get_x() + bar.get_width()/2, bar.get_height(), 
+                f'{time_val:.2f}s', ha='center', va='bottom')
+    
+    plt.grid(True, axis='y')
     plt.show()
 
 def display_grid_for_visualization(ax, env):

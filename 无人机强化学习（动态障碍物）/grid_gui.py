@@ -350,7 +350,7 @@ class GridWorldGUI:
         
     def visualize_environment(self):
         """可视化当前环境"""
-        self.env.visualize(title="当前环境配置")
+        self.env.visualize(title="the config  of current environment")
         
     def draw_grid(self):
         """绘制网格"""
@@ -419,7 +419,7 @@ class GridWorldGUI:
         self.ax.set_yticks(range(self.grid_size))
         self.ax.grid(True)
         self.ax.legend()
-        self.ax.set_title('无人机路径规划环境')
+        self.ax.set_title('the planning path')
         
         self.canvas.draw()
         
